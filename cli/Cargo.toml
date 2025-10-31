@@ -1,0 +1,37 @@
+[package]
+name = "jasonisnthappy-cli"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "jasonisnthappy"
+path = "src/main.rs"
+
+[features]
+default = ["web-ui"]
+web-ui = ["jasonisnthappy/web-ui"]
+
+[dependencies]
+# Core database library
+jasonisnthappy = { path = ".." }
+
+# CLI framework
+clap = { version = "4.4", features = ["derive", "cargo"] }
+
+# Interactive REPL
+rustyline = "13.0"
+
+# JSON handling
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Output formatting
+comfy-table = "7.1"
+colored = "2.1"
+colored_json = "4.1"
+
+# Error handling
+anyhow = "1.0"
+
+# Progress indicators
+indicatif = "0.17"

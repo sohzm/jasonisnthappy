@@ -1,0 +1,36 @@
+{
+  "name": "@sohzm/jasonisnthappy",
+  "version": "0.1.0",
+  "description": "Node.js bindings for jasonisnthappy embedded database",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "scripts": {
+    "postinstall": "node download-libs.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sohzm/jasonisnthappy.git"
+  },
+  "keywords": [
+    "database",
+    "embedded",
+    "document",
+    "nosql",
+    "json"
+  ],
+  "author": "sohzm",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/sohzm/jasonisnthappy/issues"
+  },
+  "homepage": "https://github.com/sohzm/jasonisnthappy#readme",
+  "engines": {
+    "node": ">=14"
+  },
+  "files": [
+    "index.js",
+    "index.d.ts",
+    "download-libs.js",
+    "lib"
+  ]
+}

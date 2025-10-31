@@ -1,0 +1,34 @@
+[package]
+name = "jasonisnthappy-napi"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+# Main library
+jasonisnthappy = { path = "../.." }
+
+# NAPI-RS
+napi = { version = "3", features = ["serde-json"] }
+napi-derive = "3"
+
+# JSON
+serde_json = "1.0"
+
+[build-dependencies]
+napi-build = "2"
+
+[profile.release]
+# Optimize for size
+opt-level = "z"
+lto = true
+codegen-units = 1
+strip = true
+panic = "abort"
+
+# Patch napi-build to avoid libnode.dll check when cross-compiling to Windows
+# This stub is only used during cross-compilation from Linux to Windows
+[patch.crates-io]
+napi-build = { path = "../napi-build-stub" }

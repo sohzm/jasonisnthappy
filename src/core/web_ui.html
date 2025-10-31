@@ -1,0 +1,1272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Database Dashboard</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='45' fill='%234ade80'/%3E%3C/svg%3E">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
+            background: #0a0a0a;
+            color: #e0e0e0;
+            line-height: 1.6;
+        }
+        .header {
+            background: #111;
+            border-bottom: 1px solid #222;
+            padding: 1.5rem 2rem;
+        }
+        .header-wrapper {
+            max-width: 1500px;
+            margin: 0 auto;
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .header-content h1 {
+            font-size: 1.4rem;
+            font-weight: 500;
+            color: #fff;
+            letter-spacing: -0.5px;
+        }
+        .header-content p {
+            opacity: 0.5;
+            margin-top: 0.2rem;
+            font-size: 0.85rem;
+        }
+        .github-link {
+            background: #222;
+            color: #e0e0e0;
+            border: 1px solid #333;
+            padding: 0.5rem 1rem;
+            border-radius: 3px;
+            text-decoration: none;
+            font-size: 0.85rem;
+            font-family: inherit;
+            transition: all 0.15s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .github-link:hover {
+            background: #2a2a2a;
+            border-color: #4ade80;
+            color: #4ade80;
+        }
+        .github-link::before {
+            content: "⭐";
+        }
+        .container {
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1rem;
+            max-width: 1500px;
+            margin: auto;
+            margin-bottom: 2rem;
+        }
+        .card {
+            background: #111;
+            border: 1px solid #222;
+            border-radius: 4px;
+            padding: 1.25rem;
+        }
+        .card h2 {
+            font-size: 0.75rem;
+            margin-bottom: 1rem;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 500;
+        }
+        .metric {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.4rem 0;
+            font-size: 0.9rem;
+        }
+        .metric-label {
+            color: #666;
+        }
+        .metric-value {
+            font-weight: 500;
+            color: #e0e0e0;
+            font-variant-numeric: tabular-nums;
+        }
+        .metric-value.good { color: #4ade80; }
+        .metric-value.warning { color: #fbbf24; }
+        .metric-value.error { color: #f87171; }
+        .collections {
+            background: #111;
+            border: 1px solid #222;
+            border-radius: 4px;
+            padding: 1.25rem;
+            max-width: 1500px;
+            margin: 0 auto;
+        }
+        .collections h2 {
+            font-size: 0.75rem;
+            margin-bottom: 1rem;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 500;
+        }
+        .collection-item {
+            padding: 0.75rem;
+            margin: 0.4rem 0;
+            background: #0a0a0a;
+            border: 1px solid #222;
+            border-radius: 3px;
+            transition: all 0.15s ease;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .collection-item:hover {
+            background: #1a1a1a;
+            border-color: #333;
+        }
+        .collection-name {
+            font-weight: 500;
+            color: #e0e0e0;
+            font-size: 0.9rem;
+        }
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: #666;
+            font-size: 0.85rem;
+        }
+        .error {
+            color: #fca5a5;
+        }
+        .refresh-btn {
+            background: #222;
+            color: #e0e0e0;
+            border: 1px solid #333;
+            padding: 0.6rem 1.2rem;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            margin-top: 1rem;
+            transition: all 0.15s ease;
+            font-family: inherit;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            width: fit-content;
+        }
+        .refresh-btn:hover {
+            background: #2a2a2a;
+            border-color: #444;
+        }
+        .refresh-indicator {
+            display: flex;
+            gap: 0.3rem;
+            align-items: center;
+        }
+        .refresh-rect {
+            width: 3px;
+            height: 0.85rem;
+            background: #333;
+            border-radius: 1px;
+            transition: background 0.3s ease;
+        }
+        .refresh-rect.filled {
+            background: #4ade80;
+        }
+        .status-indicator {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            margin-right: 0.6rem;
+            background: #4ade80;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* Collection view for document viewing */
+        .collection-view-header {
+            max-width: 1500px;
+            margin: 0 auto 1.5rem auto;
+            padding: 0 0.5rem;
+        }
+        .breadcrumb {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 1.1rem;
+            color: #666;
+        }
+        .breadcrumb-home {
+            color: #4ade80;
+            cursor: pointer;
+            text-decoration: none;
+            transition: color 0.15s ease;
+            font-weight: 500;
+        }
+        .breadcrumb-home:hover {
+            color: #22c55e;
+        }
+        .breadcrumb-separator {
+            color: #444;
+        }
+        .breadcrumb-current {
+            color: #e0e0e0;
+            font-weight: 500;
+        }
+        .collection-controls {
+            max-width: 1500px;
+            margin: 0 auto 1rem auto;
+            padding: 0 0.5rem;
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+        .search-box {
+            flex: 1;
+            background: #0a0a0a;
+            border: 1px solid #333;
+            border-radius: 3px;
+            padding: 0.6rem 0.8rem;
+            color: #e0e0e0;
+            font-family: inherit;
+            font-size: 0.85rem;
+            transition: border-color 0.15s ease;
+        }
+        .search-box:focus {
+            outline: none;
+            border-color: #4ade80;
+        }
+        .search-box::placeholder {
+            color: #666;
+        }
+        .pagination {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .pagination button {
+            background: #222;
+            color: #e0e0e0;
+            border: 1px solid #333;
+            padding: 0.4rem 0.8rem;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-family: inherit;
+            transition: all 0.15s ease;
+        }
+        .pagination button:hover:not(:disabled) {
+            background: #2a2a2a;
+            border-color: #444;
+        }
+        .pagination button:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+        .pagination-info {
+            color: #666;
+            font-size: 0.85rem;
+            white-space: nowrap;
+        }
+        .page-size-selector {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.85rem;
+            color: #666;
+            white-space: nowrap;
+        }
+        .page-size-selector select {
+            background: #222;
+            color: #e0e0e0;
+            border: 1px solid #333;
+            padding: 0.4rem 0.6rem;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-family: inherit;
+            transition: all 0.15s ease;
+        }
+        .page-size-selector select:hover {
+            background: #2a2a2a;
+            border-color: #444;
+        }
+        .page-size-selector select:focus {
+            outline: none;
+            border-color: #4ade80;
+        }
+        .collection-body {
+            background: #111;
+            border: 1px solid #222;
+            border-radius: 4px;
+            padding: 1.25rem;
+            max-width: 1500px;
+            margin: 0 auto;
+        }
+        .document {
+            background: #0a0a0a;
+            border: 1px solid #222;
+            border-radius: 3px;
+            padding: 1rem;
+            margin-bottom: 0.75rem;
+            font-size: 0.85rem;
+        }
+        .document pre {
+            color: #e0e0e0;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            font-family: inherit;
+            margin: 0;
+            line-height: 1.6;
+        }
+        .doc-count {
+            color: #666;
+            font-size: 0.85rem;
+            margin-bottom: 1rem;
+        }
+        .no-results {
+            text-align: center;
+            color: #666;
+            padding: 2rem;
+            font-size: 0.85rem;
+        }
+        .doc-actions {
+            margin-top: 0.75rem;
+            padding-top: 0.75rem;
+            border-top: 1px solid #222;
+            display: flex;
+            gap: 0.5rem;
+        }
+        .btn {
+            background: #222;
+            color: #e0e0e0;
+            border: 1px solid #333;
+            padding: 0.4rem 0.8rem;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-family: inherit;
+            transition: all 0.15s ease;
+        }
+        .btn:hover {
+            background: #2a2a2a;
+            border-color: #444;
+        }
+        .btn.primary {
+            background: #4ade80;
+            color: #0a0a0a;
+            border-color: #4ade80;
+        }
+        .btn.primary:hover {
+            background: #22c55e;
+            border-color: #22c55e;
+        }
+        .btn.danger {
+            background: #7f1d1d;
+            color: #fca5a5;
+            border-color: #991b1b;
+        }
+        .btn.danger:hover {
+            background: #991b1b;
+        }
+        .editor {
+            display: none;
+            background: #0a0a0a;
+            border: 1px solid #333;
+            border-radius: 3px;
+            padding: 1rem;
+            margin-top: 0.75rem;
+        }
+        .editor.active {
+            display: block;
+        }
+        .editor textarea {
+            width: 100%;
+            min-height: 200px;
+            background: #000;
+            border: 1px solid #333;
+            border-radius: 3px;
+            padding: 0.8rem;
+            color: #e0e0e0;
+            font-family: inherit;
+            font-size: 0.85rem;
+            resize: vertical;
+            line-height: 1.6;
+        }
+        .editor textarea:focus {
+            outline: none;
+            border-color: #4ade80;
+        }
+        .editor-actions {
+            margin-top: 0.75rem;
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+        .editor-error {
+            color: #f87171;
+            font-size: 0.85rem;
+            margin-top: 0.5rem;
+        }
+        .create-new-btn {
+            background: #4ade80;
+            color: #0a0a0a;
+            border: 1px solid #4ade80;
+            padding: 0.6rem 1rem;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-family: inherit;
+            transition: all 0.15s ease;
+            font-weight: 500;
+        }
+        .create-new-btn:hover {
+            background: #22c55e;
+            border-color: #22c55e;
+        }
+        .collection-actions {
+            display: flex;
+            gap: 0.4rem;
+            margin-top: 0.5rem;
+            opacity: 0;
+            transition: opacity 0.15s ease;
+        }
+        .collection-item:hover .collection-actions {
+            opacity: 1;
+        }
+        .collection-btn {
+            background: none;
+            border: 1px solid #333;
+            color: #666;
+            padding: 0.2rem 0.5rem;
+            border-radius: 2px;
+            cursor: pointer;
+            font-size: 0.75rem;
+            font-family: inherit;
+            transition: all 0.15s ease;
+        }
+        .collection-btn:hover {
+            background: #222;
+            border-color: #444;
+            color: #e0e0e0;
+        }
+        .collection-btn.danger:hover {
+            background: #7f1d1d;
+            border-color: #991b1b;
+            color: #fca5a5;
+        }
+        .collection-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+        .input-box {
+            background: #0a0a0a;
+            border: 1px solid #333;
+            border-radius: 3px;
+            padding: 0.4rem 0.6rem;
+            color: #e0e0e0;
+            font-family: inherit;
+            font-size: 0.85rem;
+        }
+        .input-box:focus {
+            outline: none;
+            border-color: #4ade80;
+        }
+        .footer {
+            text-align: center;
+            padding: 2rem;
+            padding-top: 4rem;
+            color: #666;
+            font-size: 0.85rem;
+            margin-top: 2rem;
+            max-width: 1500px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        .footer a {
+            color: #4ade80;
+            text-decoration: none;
+            transition: color 0.15s ease;
+        }
+        .footer a:hover {
+            color: #22c55e;
+        }
+
+        /* Mobile responsive styles */
+        @media (max-width: 768px) {
+            .header {
+                padding: 1rem;
+            }
+            .header-wrapper {
+                flex-direction: column;
+                gap: 1rem;
+                align-items: flex-start;
+            }
+            .header-content h1 {
+                font-size: 1.1rem;
+            }
+            .header-content p {
+                font-size: 0.75rem;
+            }
+            .github-link {
+                font-size: 0.75rem;
+                padding: 0.4rem 0.8rem;
+            }
+            .container {
+                padding: 1rem;
+            }
+            .grid {
+                grid-template-columns: 1fr;
+            }
+
+            /* Collection view on mobile */
+            .collection-view-header {
+                padding: 0 1rem;
+                margin-bottom: 1rem;
+            }
+            .breadcrumb {
+                font-size: 0.9rem;
+            }
+            .collection-controls {
+                padding: 0 1rem;
+                flex-direction: column;
+                gap: 0.75rem;
+            }
+            .create-new-btn {
+                width: 100%;
+                justify-content: center;
+                padding: 0.5rem;
+                font-size: 0.8rem;
+            }
+            .search-box {
+                width: 100%;
+                font-size: 0.8rem;
+            }
+            .pagination {
+                width: 100%;
+                justify-content: center;
+            }
+            .pagination button {
+                font-size: 0.8rem;
+                padding: 0.4rem 0.6rem;
+            }
+            .pagination-info {
+                font-size: 0.8rem;
+            }
+            .page-size-selector {
+                width: 100%;
+                justify-content: center;
+                font-size: 0.8rem;
+            }
+            .page-size-selector select {
+                font-size: 0.8rem;
+                padding: 0.4rem 0.5rem;
+            }
+            .collection-body {
+                padding: 1rem;
+            }
+            .document {
+                font-size: 0.75rem;
+            }
+            .doc-actions {
+                flex-wrap: wrap;
+            }
+            .btn {
+                font-size: 0.75rem;
+                padding: 0.3rem 0.6rem;
+            }
+            .collection-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 0.75rem;
+            }
+            .collection-header .create-new-btn {
+                width: 100%;
+            }
+            .collection-actions {
+                opacity: 1;
+            }
+            .collection-btn {
+                font-size: 0.7rem;
+                padding: 0.2rem 0.4rem;
+            }
+            .refresh-btn {
+                font-size: 0.8rem;
+                padding: 0.5rem 1rem;
+            }
+            .refresh-rect {
+                width: 2px;
+                height: 0.75rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-wrapper">
+            <div class="header-content">
+                <h1><span class="status-indicator"></span>database.metrics()</h1>
+                <p>real-time observability dashboard</p>
+            </div>
+            <a href="https://github.com/sohzm/jasonisnthappy" target="_blank" rel="noopener noreferrer" class="github-link">
+                star us on github
+            </a>
+        </div>
+    </div>
+
+    <div class="container">
+        <div id="main-view">
+            <div class="grid">
+                <div class="card">
+                    <h2>Transactions</h2>
+                    <div class="metric">
+                        <span class="metric-label">active</span>
+                        <span class="metric-value" id="active-tx">-</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">committed</span>
+                        <span class="metric-value good" id="committed-tx">-</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">aborted</span>
+                        <span class="metric-value error" id="aborted-tx">-</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">commit_rate</span>
+                        <span class="metric-value" id="commit-rate">-</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">conflicts</span>
+                        <span class="metric-value warning" id="conflicts">-</span>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h2>Cache</h2>
+                    <div class="metric">
+                        <span class="metric-label">hit_rate</span>
+                        <span class="metric-value good" id="cache-hit-rate">-</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">hits</span>
+                        <span class="metric-value" id="cache-hits">-</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">misses</span>
+                        <span class="metric-value" id="cache-misses">-</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">dirty_pages</span>
+                        <span class="metric-value" id="dirty-pages">-</span>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h2>Storage</h2>
+                    <div class="metric">
+                        <span class="metric-label">pages_alloc</span>
+                        <span class="metric-value" id="pages-alloc">-</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">pages_freed</span>
+                        <span class="metric-value" id="pages-freed">-</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">wal_writes</span>
+                        <span class="metric-value" id="wal-writes">-</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">wal_bytes</span>
+                        <span class="metric-value" id="wal-bytes">-</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">checkpoints</span>
+                        <span class="metric-value" id="checkpoints">-</span>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h2>Documents</h2>
+                    <div class="metric">
+                        <span class="metric-label">inserted</span>
+                        <span class="metric-value good" id="docs-inserted">-</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">updated</span>
+                        <span class="metric-value" id="docs-updated">-</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">deleted</span>
+                        <span class="metric-value error" id="docs-deleted">-</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">read</span>
+                        <span class="metric-value" id="docs-read">-</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="collections">
+                <div class="collection-header">
+                    <h2>Collections</h2>
+                    <button class="create-new-btn" onclick="createCollection()">+ new collection</button>
+                </div>
+                <div id="collections-container">
+                    <div class="loading">loading collections...</div>
+                </div>
+                <button class="refresh-btn" onclick="refreshData()">
+                    <span>refresh</span>
+                    <div class="refresh-indicator">
+                        <div class="refresh-rect" id="rect-0"></div>
+                        <div class="refresh-rect" id="rect-1"></div>
+                        <div class="refresh-rect" id="rect-2"></div>
+                        <div class="refresh-rect" id="rect-3"></div>
+                        <div class="refresh-rect" id="rect-4"></div>
+                    </div>
+                </button>
+            </div>
+
+            <div class="footer">
+                made with love by <a href="https://soham.sh" target="_blank" rel="noopener noreferrer">soham</a>
+            </div>
+        </div>
+
+        <div id="collection-view" style="display: none;">
+            <div class="collection-view-header">
+                <div class="breadcrumb">
+                    <span class="breadcrumb-home" onclick="closeCollectionView()">HOME</span>
+                    <span class="breadcrumb-separator">/</span>
+                    <span class="breadcrumb-current" id="collection-title">Collection</span>
+                </div>
+            </div>
+            <div class="collection-controls">
+                <button class="create-new-btn" onclick="createNewDocument()">+ new document</button>
+                <input
+                    type="text"
+                    class="search-box"
+                    id="search-input"
+                    placeholder="search documents (type to filter)..."
+                    oninput="handleSearch()"
+                />
+                <div class="page-size-selector">
+                    <span>show</span>
+                    <select id="page-size" onchange="handlePageSizeChange()">
+                        <option value="10">10</option>
+                        <option value="50">50</option>
+                        <option value="100">100</option>
+                        <option value="500">500</option>
+                        <option value="1000">1000</option>
+                    </select>
+                </div>
+                <div class="pagination">
+                    <button onclick="previousPage()">←</button>
+                    <span class="pagination-info" id="pagination-info">-</span>
+                    <button onclick="nextPage()">→</button>
+                </div>
+            </div>
+            <div class="collection-body" id="collection-body">
+                <div class="loading">Loading documents...</div>
+            </div>
+        </div>
+    </div>
+
+
+    <script>
+        let currentDocs = [];
+        let filteredDocs = [];
+        let currentPage = 0;
+        let docsPerPage = 10;
+        let currentCollection = '';
+        let autoRefreshInterval = null;
+        let isModalOpen = false;
+        let refreshCounter = 0;
+        const totalRefreshRects = 5;
+
+        function formatNumber(num) {
+            if (num >= 1000000) return (num / 1000000).toFixed(2) + 'M';
+            if (num >= 1000) return (num / 1000).toFixed(2) + 'K';
+            return num.toString();
+        }
+
+        function formatBytes(bytes) {
+            if (bytes >= 1073741824) return (bytes / 1073741824).toFixed(2) + ' GB';
+            if (bytes >= 1048576) return (bytes / 1048576).toFixed(2) + ' MB';
+            if (bytes >= 1024) return (bytes / 1024).toFixed(2) + ' KB';
+            return bytes + ' B';
+        }
+
+        async function loadMetrics() {
+            try {
+                const response = await fetch('/metrics');
+                const metrics = await response.json();
+
+                document.getElementById('active-tx').textContent = metrics.active_transactions;
+                document.getElementById('committed-tx').textContent = formatNumber(metrics.transactions_committed);
+                document.getElementById('aborted-tx').textContent = formatNumber(metrics.transactions_aborted);
+                document.getElementById('commit-rate').textContent = (metrics.commit_rate * 100).toFixed(1) + '%';
+                document.getElementById('conflicts').textContent = formatNumber(metrics.transaction_conflicts);
+
+                document.getElementById('cache-hit-rate').textContent = (metrics.cache_hit_rate * 100).toFixed(1) + '%';
+                document.getElementById('cache-hits').textContent = formatNumber(metrics.cache_hits);
+                document.getElementById('cache-misses').textContent = formatNumber(metrics.cache_misses);
+                document.getElementById('dirty-pages').textContent = metrics.dirty_pages;
+
+                document.getElementById('pages-alloc').textContent = formatNumber(metrics.pages_allocated);
+                document.getElementById('pages-freed').textContent = formatNumber(metrics.pages_freed);
+                document.getElementById('wal-writes').textContent = formatNumber(metrics.wal_writes);
+                document.getElementById('wal-bytes').textContent = formatBytes(metrics.wal_bytes_written);
+                document.getElementById('checkpoints').textContent = metrics.checkpoints;
+
+                document.getElementById('docs-inserted').textContent = formatNumber(metrics.documents_inserted);
+                document.getElementById('docs-updated').textContent = formatNumber(metrics.documents_updated);
+                document.getElementById('docs-deleted').textContent = formatNumber(metrics.documents_deleted);
+                document.getElementById('docs-read').textContent = formatNumber(metrics.documents_read);
+            } catch (error) {
+                console.error('Failed to load metrics:', error);
+            }
+        }
+
+        async function loadCollections() {
+            try {
+                const response = await fetch('/api/collections');
+                const collections = await response.json();
+
+                const container = document.getElementById('collections-container');
+                if (collections.length === 0) {
+                    container.innerHTML = '<div class="loading">no collections found</div>';
+                } else {
+                    container.innerHTML = collections.map(name =>
+                        `<div class="collection-item">
+                            <div onclick="viewCollection('${name}')" style="cursor: pointer; flex: 1;">
+                                <span class="collection-name">${name}</span>
+                            </div>
+                            <div class="collection-actions" onclick="event.stopPropagation()">
+                                <button class="collection-btn" onclick="renameCollection('${name}')">rename</button>
+                                <button class="collection-btn danger" onclick="deleteCollection('${name}')">delete</button>
+                            </div>
+                        </div>`
+                    ).join('');
+                }
+            } catch (error) {
+                document.getElementById('collections-container').innerHTML =
+                    '<div class="error">failed to load collections</div>';
+            }
+        }
+
+        async function viewCollection(name) {
+            const mainView = document.getElementById('main-view');
+            const collectionView = document.getElementById('collection-view');
+            const collectionTitle = document.getElementById('collection-title');
+            const collectionBody = document.getElementById('collection-body');
+            const searchInput = document.getElementById('search-input');
+            const pageSizeSelect = document.getElementById('page-size');
+
+            // Show collection view and hide main view
+            mainView.style.display = 'none';
+            collectionView.style.display = 'block';
+            isModalOpen = true;
+            currentCollection = name;
+            collectionTitle.textContent = name;
+            collectionBody.innerHTML = '<div class="loading">loading documents...</div>';
+            searchInput.value = '';
+            pageSizeSelect.value = '10';
+            docsPerPage = 10;
+            currentPage = 0;
+
+            try {
+                const response = await fetch(`/api/collections/${name}`);
+                const docs = await response.json();
+
+                currentDocs = docs;
+                filteredDocs = docs;
+                renderDocuments();
+            } catch (error) {
+                collectionBody.innerHTML = '<div class="error">failed to load documents</div>';
+            }
+        }
+
+        function handleSearch() {
+            const searchTerm = document.getElementById('search-input').value.toLowerCase();
+
+            if (!searchTerm) {
+                filteredDocs = currentDocs;
+            } else {
+                filteredDocs = currentDocs.filter(doc => {
+                    const docString = JSON.stringify(doc).toLowerCase();
+                    return docString.includes(searchTerm);
+                });
+            }
+
+            currentPage = 0;
+            renderDocuments();
+        }
+
+        function handlePageSizeChange() {
+            const pageSizeSelect = document.getElementById('page-size');
+            docsPerPage = parseInt(pageSizeSelect.value);
+            currentPage = 0;
+            renderDocuments();
+        }
+
+        function renderDocuments() {
+            const collectionBody = document.getElementById('collection-body');
+            const paginationInfo = document.getElementById('pagination-info');
+
+            if (filteredDocs.length === 0) {
+                collectionBody.innerHTML = '<div class="no-results">no documents match your search</div>';
+                paginationInfo.textContent = '0 / 0';
+                return;
+            }
+
+            const totalPages = Math.ceil(filteredDocs.length / docsPerPage);
+            const startIdx = currentPage * docsPerPage;
+            const endIdx = Math.min(startIdx + docsPerPage, filteredDocs.length);
+            const pageDocs = filteredDocs.slice(startIdx, endIdx);
+
+            collectionBody.innerHTML = `
+                <div class="doc-count">
+                    showing ${startIdx + 1}-${endIdx} of ${filteredDocs.length} document${filteredDocs.length !== 1 ? 's' : ''}
+                </div>
+                ${pageDocs.map((doc, i) => {
+                    const docId = doc._id;
+                    const globalIdx = startIdx + i;
+                    return `
+                        <div class="document" id="doc-${globalIdx}">
+                            <pre id="doc-display-${globalIdx}">${JSON.stringify(doc, null, 4)}</pre>
+                            <div class="doc-actions">
+                                <button class="btn" onclick="editDocument(${globalIdx})">edit</button>
+                                <button class="btn danger" onclick="deleteDocument('${docId}', ${globalIdx})">delete</button>
+                            </div>
+                            <div class="editor" id="editor-${globalIdx}">
+                                <textarea id="editor-text-${globalIdx}">${JSON.stringify(doc, null, 4)}</textarea>
+                                <div class="editor-actions">
+                                    <button class="btn primary" onclick="saveDocument(${globalIdx}, '${docId}')">save</button>
+                                    <button class="btn" onclick="cancelEdit(${globalIdx})">cancel</button>
+                                    <span class="editor-error" id="editor-error-${globalIdx}"></span>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('')}
+            `;
+
+            paginationInfo.textContent = `${currentPage + 1} / ${totalPages}`;
+
+            // Update button states
+            const prevBtn = document.querySelector('.pagination button:first-child');
+            const nextBtn = document.querySelector('.pagination button:last-child');
+            prevBtn.disabled = currentPage === 0;
+            nextBtn.disabled = currentPage >= totalPages - 1;
+        }
+
+        function previousPage() {
+            if (currentPage > 0) {
+                currentPage--;
+                renderDocuments();
+            }
+        }
+
+        function nextPage() {
+            const totalPages = Math.ceil(filteredDocs.length / docsPerPage);
+            if (currentPage < totalPages - 1) {
+                currentPage++;
+                renderDocuments();
+            }
+        }
+
+        function closeCollectionView() {
+            const mainView = document.getElementById('main-view');
+            const collectionView = document.getElementById('collection-view');
+
+            mainView.style.display = 'block';
+            collectionView.style.display = 'none';
+            isModalOpen = false;
+            currentDocs = [];
+            filteredDocs = [];
+            currentPage = 0;
+            currentCollection = '';
+        }
+
+        function editDocument(idx) {
+            document.getElementById(`doc-display-${idx}`).style.display = 'none';
+            document.getElementById(`editor-${idx}`).classList.add('active');
+        }
+
+        function cancelEdit(idx) {
+            document.getElementById(`doc-display-${idx}`).style.display = 'block';
+            document.getElementById(`editor-${idx}`).classList.remove('active');
+            document.getElementById(`editor-error-${idx}`).textContent = '';
+        }
+
+        async function saveDocument(idx, docId) {
+            const textarea = document.getElementById(`editor-text-${idx}`);
+            const errorEl = document.getElementById(`editor-error-${idx}`);
+            const jsonText = textarea.value;
+
+            // Validate JSON
+            try {
+                const parsed = JSON.parse(jsonText);
+                errorEl.textContent = '';
+
+                // Ensure _id hasn't changed
+                if (parsed._id && parsed._id !== docId) {
+                    errorEl.textContent = 'cannot change _id field';
+                    return;
+                }
+
+                // Force _id to match (in case user deleted it)
+                parsed._id = docId;
+
+                // Send update to backend
+                const response = await fetch(`/api/collections/${currentCollection}/${docId}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(parsed)
+                });
+
+                if (!response.ok) {
+                    const error = await response.text();
+                    errorEl.textContent = `save failed: ${error}`;
+                    return;
+                }
+
+                // Update local state and re-render
+                filteredDocs[idx] = parsed;
+                currentDocs[idx] = parsed;
+                renderDocuments();
+            } catch (e) {
+                errorEl.textContent = `invalid json: ${e.message}`;
+            }
+        }
+
+        async function deleteDocument(docId, idx) {
+            if (!confirm('delete this document?')) return;
+
+            try {
+                const response = await fetch(`/api/collections/${currentCollection}/${docId}`, {
+                    method: 'DELETE'
+                });
+
+                if (!response.ok) {
+                    alert('delete failed: ' + await response.text());
+                    return;
+                }
+
+                // Remove from local state and re-render
+                filteredDocs.splice(idx, 1);
+                currentDocs = currentDocs.filter(d => d._id !== docId);
+                if (currentPage > 0 && filteredDocs.length <= currentPage * docsPerPage) {
+                    currentPage--;
+                }
+                renderDocuments();
+            } catch (e) {
+                alert('delete failed: ' + e.message);
+            }
+        }
+
+        async function createNewDocument() {
+            const collectionBody = document.getElementById('collection-body');
+
+            // Add create form at the top
+            const createFormHtml = `
+                <div class="document" style="border: 2px solid #4ade80;">
+                    <div style="margin-bottom: 0.75rem; color: #4ade80; font-weight: 500;">new document</div>
+                    <div class="editor active">
+                        <textarea id="create-editor">{
+    "example_field": "example_value"
+}</textarea>
+                        <div class="editor-actions">
+                            <button class="btn primary" onclick="saveNewDocument()">create</button>
+                            <button class="btn" onclick="cancelCreate()">cancel</button>
+                            <span class="editor-error" id="create-editor-error"></span>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            collectionBody.insertAdjacentHTML('afterbegin', createFormHtml);
+        }
+
+        function cancelCreate() {
+            const createDoc = document.querySelector('.document[style*="border: 2px solid #4ade80"]');
+            if (createDoc) createDoc.remove();
+        }
+
+        async function saveNewDocument() {
+            const textarea = document.getElementById('create-editor');
+            const errorEl = document.getElementById('create-editor-error');
+            const jsonText = textarea.value;
+
+            // Validate JSON
+            try {
+                const parsed = JSON.parse(jsonText);
+                errorEl.textContent = '';
+
+                // Send create to backend
+                const response = await fetch(`/api/collections/${currentCollection}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: jsonText
+                });
+
+                if (!response.ok) {
+                    const error = await response.text();
+                    errorEl.textContent = `create failed: ${error}`;
+                    return;
+                }
+
+                // Reload collection
+                cancelCreate();
+                viewCollection(currentCollection);
+            } catch (e) {
+                errorEl.textContent = `invalid json: ${e.message}`;
+            }
+        }
+
+        // Close collection view on Escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && isModalOpen) closeCollectionView();
+        });
+
+        function refreshData() {
+            // Only refresh if modal is closed
+            if (!isModalOpen) {
+                loadMetrics();
+                loadCollections();
+            }
+
+            // Reset the timer and animation
+            refreshCounter = 0;
+            for (let i = 0; i < totalRefreshRects; i++) {
+                const r = document.getElementById(`rect-${i}`);
+                if (r) {
+                    r.classList.remove('filled');
+                }
+            }
+        }
+
+        function updateRefreshIndicator() {
+            // Only update if modal is closed
+            if (!isModalOpen) {
+                // Fill the current rectangle
+                const rect = document.getElementById(`rect-${refreshCounter}`);
+                if (rect) {
+                    rect.classList.add('filled');
+                }
+
+                refreshCounter++;
+
+                // If all rectangles are filled, refresh and reset
+                if (refreshCounter >= totalRefreshRects) {
+                    refreshData();
+                    refreshCounter = 0;
+                    // Clear all rectangles
+                    for (let i = 0; i < totalRefreshRects; i++) {
+                        const r = document.getElementById(`rect-${i}`);
+                        if (r) {
+                            r.classList.remove('filled');
+                        }
+                    }
+                }
+            }
+        }
+
+        // Initial load
+        refreshData();
+
+        // Update indicator every second
+        autoRefreshInterval = setInterval(updateRefreshIndicator, 1000);
+
+        // Collection management functions
+        async function createCollection() {
+            const name = prompt('enter collection name:');
+            if (!name || !name.trim()) return;
+
+            const trimmedName = name.trim();
+            if (!/^[a-zA-Z0-9_]+$/.test(trimmedName)) {
+                alert('collection name can only contain letters, numbers, and underscores');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/collections', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: trimmedName })
+                });
+
+                if (!response.ok) {
+                    alert('failed to create collection: ' + await response.text());
+                    return;
+                }
+
+                refreshData();
+            } catch (e) {
+                alert('failed to create collection: ' + e.message);
+            }
+        }
+
+        async function renameCollection(oldName) {
+            const newName = prompt(`rename collection "${oldName}" to:`, oldName);
+            if (!newName || !newName.trim() || newName === oldName) return;
+
+            const trimmedName = newName.trim();
+            if (!/^[a-zA-Z0-9_]+$/.test(trimmedName)) {
+                alert('collection name can only contain letters, numbers, and underscores');
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/collections/${oldName}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ new_name: trimmedName })
+                });
+
+                if (!response.ok) {
+                    alert('failed to rename collection: ' + await response.text());
+                    return;
+                }
+
+                refreshData();
+            } catch (e) {
+                alert('failed to rename collection: ' + e.message);
+            }
+        }
+
+        async function deleteCollection(name) {
+            if (!confirm(`delete collection "${name}" and all its documents?`)) return;
+
+            try {
+                const response = await fetch(`/api/collections/${name}`, {
+                    method: 'DELETE'
+                });
+
+                if (!response.ok) {
+                    alert('failed to delete collection: ' + await response.text());
+                    return;
+                }
+
+                refreshData();
+            } catch (e) {
+                alert('failed to delete collection: ' + e.message);
+            }
+        }
+    </script>
+</body>
+</html>

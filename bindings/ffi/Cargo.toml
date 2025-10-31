@@ -1,0 +1,29 @@
+[package]
+name = "jasonisnthappy-ffi"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+# Build both static (.a) for Go and dynamic (.so/.dylib/.dll) for JS/Python
+crate-type = ["staticlib", "cdylib"]
+name = "jasonisnthappy"
+
+[features]
+default = []
+web-ui = ["jasonisnthappy/web-ui"]
+
+[dependencies]
+jasonisnthappy = { path = "../.." }
+serde_json = "1.0"
+
+[build-dependencies]
+cbindgen = "0.27"
+
+[profile.release]
+# Optimize for size instead of speed
+opt-level = "z"     # Optimize for size (even more than "s")
+lto = true          # Enable Link Time Optimization
+codegen-units = 1   # Single codegen unit for better optimization
+strip = true        # Strip symbols from binary
+panic = "abort"     # Don't include unwinding code
+overflow-checks = false  # Disable overflow checks in release

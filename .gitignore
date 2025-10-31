@@ -1,0 +1,97 @@
+# Rust build artifacts
+/target/
+cli/target/
+**/*.rs.bk
+*.pdb
+
+# Cargo lock for binaries
+cli/Cargo.lock
+
+# Compiled libraries
+*.dylib
+*.so
+*.a
+*.dll
+
+# Cargo lock file (uncomment for libraries)
+# Cargo.lock
+
+# Generated documentation
+/doc/
+
+# IDE / Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Database test files
+*.db
+*.db.lock
+*.db-wal
+
+# Example databases
+example.db
+example.db.lock
+example.db-wal
+mydb.db
+mydb.db.lock
+mydb.db-wal
+
+# Test artifacts
+/tmp/
+
+# Backup files
+*.bak
+*.backup
+
+# Profiling data
+*.profraw
+*.profdata
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Linux
+*~
+.directory
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Build artifacts for bindings
+/builds/
+/build-output/
+bindings/*/target/
+bindings/napi/.cargo/
+bindings/go/lib/
+bindings/napi/lib/
+bindings/python/jasonisnthappy/lib/
+
+# Node.js
+test-node/node_modules/
+test-node/*.node
+bindings/napi/node_modules/
+bindings/napi/lib/*.node
+
+# Python
+test-python/__pycache__/
+test-python/*.pyc
+test-python/venv/
+test-python/.venv/
+bindings/python/build/
+bindings/python/dist/
+bindings/python/*.egg-info/
+bindings/python/**/__pycache__/
+bindings/python/**/*.pyc
+# Python native header files (copied during build)
+bindings/python/jasonisnthappy/*.h
+
+# Go
+test-go/go.sum
