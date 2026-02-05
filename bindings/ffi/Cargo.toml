@@ -1,6 +1,6 @@
 [package]
 name = "jasonisnthappy-ffi"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 
 [lib]
@@ -9,7 +9,7 @@ crate-type = ["staticlib", "cdylib"]
 name = "jasonisnthappy"
 
 [features]
-default = []
+default = ["web-ui"]
 web-ui = ["jasonisnthappy/web-ui"]
 
 [dependencies]

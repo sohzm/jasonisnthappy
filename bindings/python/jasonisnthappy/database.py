@@ -19,7 +19,6 @@ class UpsertResult:
 
 def _get_library_path():
     """Get library path, checking package directory first, then fallback to loader."""
-    # First check if library exists in package directory (installed during pip install)
     system = platform.system()
     machine = platform.machine().lower()
 
@@ -37,10 +36,17 @@ def _get_library_path():
         from .loader import get_library_path
         return get_library_path()
 
-    # Check package lib directory first
-    package_lib_path = Path(__file__).parent / "lib" / lib_dir / lib_name
-    if package_lib_path.exists():
-        return str(package_lib_path)
+    package_dir = Path(__file__).parent
+
+    # Check package root directory first (where wheel build puts it)
+    root_lib_path = package_dir / lib_name
+    if root_lib_path.exists():
+        return str(root_lib_path)
+
+    # Check lib/<platform>/ directory
+    platform_lib_path = package_dir / "lib" / lib_dir / lib_name
+    if platform_lib_path.exists():
+        return str(platform_lib_path)
 
     # Fallback to loader (downloads to ~/.jasonisnthappy/)
     from .loader import get_library_path

@@ -1,6 +1,6 @@
 [package]
 name = "jasonisnthappy"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 authors = ["Soham Bharambe"]
 description = "A lightweight, embedded document database with ACID transactions and MVCC support"
