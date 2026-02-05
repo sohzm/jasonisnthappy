@@ -19,12 +19,12 @@ function getPlatformInfo() {
     if (arch === 'arm64') {
       return {
         dir: 'darwin-arm64',
-        file: 'jasonisnthappy.darwin-arm64.node',
+        file: 'darwin-arm64.node',
       };
     } else if (arch === 'x64') {
       return {
         dir: 'darwin-amd64',
-        file: 'jasonisnthappy.darwin-x64.node',
+        file: 'darwin-amd64.node',
       };
     }
     throw new Error(`Unsupported macOS architecture: ${arch}`);
@@ -32,12 +32,12 @@ function getPlatformInfo() {
     if (arch === 'arm64') {
       return {
         dir: 'linux-arm64',
-        file: 'jasonisnthappy.linux-arm64-gnu.node',
+        file: 'linux-arm64.node',
       };
     } else if (arch === 'x64') {
       return {
         dir: 'linux-amd64',
-        file: 'jasonisnthappy.linux-x64-gnu.node',
+        file: 'linux-amd64.node',
       };
     }
     throw new Error(`Unsupported Linux architecture: ${arch}`);
@@ -51,7 +51,7 @@ function getPlatformInfo() {
     } else if (arch === 'x64') {
       return {
         dir: 'windows-amd64',
-        file: 'jasonisnthappy.win32-x64-msvc.node',
+        file: 'windows-amd64.node',
       };
     }
     throw new Error(`Unsupported Windows architecture: ${arch}`);
