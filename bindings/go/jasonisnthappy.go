@@ -483,16 +483,17 @@ func (d *Database) IsReadOnly() (bool, error) {
 		return false, &Error{Code: -1, Message: "Database is closed"}
 	}
 
+	var readOnly C.bool
 	var cErr C.CError
-	result := C.jasonisnthappy_is_read_only(d.db, &cErr)
+	result := C.jasonisnthappy_is_read_only(d.db, &readOnly, &cErr)
 
-	if result == -1 {
+	if result != 0 {
 		err := cErrorToGoError(&cErr)
 		C.jasonisnthappy_free_error(cErr)
 		return false, err
 	}
 
-	return result == 1, nil
+	return bool(readOnly), nil
 }
 
 // MaxBulkOperations returns the maximum number of bulk operations allowed
@@ -696,20 +697,20 @@ func (d *Database) CreateCompoundIndex(collectionName, indexName string, fields 
 	cIndexName := C.CString(indexName)
 	defer C.free(unsafe.Pointer(cIndexName))
 
-	// Convert Go []string to C array of strings
-	cFields := make([]*C.char, len(fields))
-	for i, field := range fields {
-		cFields[i] = C.CString(field)
-		defer C.free(unsafe.Pointer(cFields[i]))
+	// Convert Go []string to JSON
+	fieldsJSON, err := json.Marshal(fields)
+	if err != nil {
+		return err
 	}
+	cFieldsJSON := C.CString(string(fieldsJSON))
+	defer C.free(unsafe.Pointer(cFieldsJSON))
 
 	var cErr C.CError
 	result := C.jasonisnthappy_create_compound_index(
 		d.db,
 		cCollName,
 		cIndexName,
-		(**C.char)(unsafe.Pointer(&cFields[0])),
-		C.ulong(len(fields)),
+		cFieldsJSON,
 		C.bool(unique),
 		&cErr,
 	)
@@ -724,7 +725,7 @@ func (d *Database) CreateCompoundIndex(collectionName, indexName string, fields 
 }
 
 // CreateTextIndex creates a text search index
-func (d *Database) CreateTextIndex(collectionName, indexName string, fields []string) error {
+func (d *Database) CreateTextIndex(collectionName, indexName, field string) error {
 	if d.db == nil {
 		return &Error{Code: -1, Message: "Database is closed"}
 	}
@@ -735,19 +736,15 @@ func (d *Database) CreateTextIndex(collectionName, indexName string, fields []st
 	cIndexName := C.CString(indexName)
 	defer C.free(unsafe.Pointer(cIndexName))
 
-	cFields := make([]*C.char, len(fields))
-	for i, field := range fields {
-		cFields[i] = C.CString(field)
-		defer C.free(unsafe.Pointer(cFields[i]))
-	}
+	cField := C.CString(field)
+	defer C.free(unsafe.Pointer(cField))
 
 	var cErr C.CError
 	result := C.jasonisnthappy_create_text_index(
 		d.db,
 		cCollName,
 		cIndexName,
-		(**C.char)(unsafe.Pointer(&cFields[0])),
-		C.ulong(len(fields)),
+		cField,
 		&cErr,
 	)
 
@@ -915,18 +912,14 @@ func (d *Database) Backup(destPath string) error {
 	return nil
 }
 
-// VerifyBackup verifies a backup file
-func (d *Database) VerifyBackup(backupPath string) (map[string]interface{}, error) {
-	if d.db == nil {
-		return nil, &Error{Code: -1, Message: "Database is closed"}
-	}
-
+// VerifyBackup verifies a backup file (package-level function)
+func VerifyBackup(backupPath string) (map[string]interface{}, error) {
 	cBackupPath := C.CString(backupPath)
 	defer C.free(unsafe.Pointer(cBackupPath))
 
 	var cJSON *C.char
 	var cErr C.CError
-	result := C.jasonisnthappy_verify_backup(d.db, cBackupPath, &cJSON, &cErr)
+	result := C.jasonisnthappy_verify_backup(cBackupPath, &cJSON, &cErr)
 
 	if result != 0 {
 		err := cErrorToGoError(&cErr)
@@ -1000,22 +993,21 @@ func (d *Database) Metrics() (map[string]interface{}, error) {
 }
 
 // FrameCount returns the current frame count
-func (d *Database) FrameCount() (uint64, error) {
+func (d *Database) FrameCount() (int64, error) {
 	if d.db == nil {
 		return 0, &Error{Code: -1, Message: "Database is closed"}
 	}
 
-	var count C.ulonglong
 	var cErr C.CError
-	result := C.jasonisnthappy_frame_count(d.db, &count, &cErr)
+	count := C.jasonisnthappy_frame_count(d.db, &cErr)
 
-	if result != 0 {
+	if count == -1 {
 		err := cErrorToGoError(&cErr)
 		C.jasonisnthappy_free_error(cErr)
 		return 0, err
 	}
 
-	return uint64(count), nil
+	return int64(count), nil
 }
 
 // ============================================================================
@@ -1084,10 +1076,15 @@ func (t *Transaction) IsActive() bool {
 		return false
 	}
 
+	var isActive C.bool
 	var cErr C.CError
-	result := C.jasonisnthappy_transaction_is_active(t.tx, &cErr)
+	result := C.jasonisnthappy_transaction_is_active(t.tx, &isActive, &cErr)
 
-	return result == 1
+	if result != 0 {
+		return false
+	}
+
+	return bool(isActive)
 }
 
 // CreateCollection creates a new collection within the transaction
@@ -1157,7 +1154,7 @@ func (t *Transaction) RenameCollection(oldName, newName string) error {
 }
 
 // Count returns the number of documents in a collection
-func (t *Transaction) Count(collectionName string) (uint64, error) {
+func (t *Transaction) Count(collectionName string) (int64, error) {
 	if t.tx == nil {
 		return 0, &Error{Code: -1, Message: "Transaction is closed"}
 	}
@@ -1165,17 +1162,16 @@ func (t *Transaction) Count(collectionName string) (uint64, error) {
 	cCollName := C.CString(collectionName)
 	defer C.free(unsafe.Pointer(cCollName))
 
-	var count C.ulonglong
 	var cErr C.CError
-	result := C.jasonisnthappy_count(t.tx, cCollName, &count, &cErr)
+	count := C.jasonisnthappy_count(t.tx, cCollName, &cErr)
 
-	if result != 0 {
+	if count == -1 {
 		err := cErrorToGoError(&cErr)
 		C.jasonisnthappy_free_error(cErr)
 		return 0, err
 	}
 
-	return uint64(count), nil
+	return int64(count), nil
 }
 
 // ============================================================================
@@ -1352,22 +1348,21 @@ func (c *Collection) FindAll(result interface{}) error {
 }
 
 // Count returns the number of documents in the collection
-func (c *Collection) Count() (uint64, error) {
+func (c *Collection) Count() (int64, error) {
 	if c.coll == nil {
 		return 0, &Error{Code: -1, Message: "Collection is closed"}
 	}
 
-	var count C.ulong
 	var cErr C.CError
-	result := C.jasonisnthappy_collection_count(c.coll, &count, &cErr)
+	count := C.jasonisnthappy_collection_count(c.coll, &cErr)
 
-	if result != 0 {
+	if count == -1 {
 		err := cErrorToGoError(&cErr)
 		C.jasonisnthappy_free_error(cErr)
 		return 0, err
 	}
 
-	return uint64(count), nil
+	return int64(count), nil
 }
 
 // Name returns the collection name
@@ -1455,7 +1450,7 @@ func (c *Collection) FindOne(filter string, result interface{}) (bool, error) {
 }
 
 // Update updates all documents matching a filter
-func (c *Collection) Update(filter string, update interface{}) (uint64, error) {
+func (c *Collection) Update(filter string, update interface{}) (int64, error) {
 	if c.coll == nil {
 		return 0, &Error{Code: -1, Message: "Collection is closed"}
 	}
@@ -1470,17 +1465,16 @@ func (c *Collection) Update(filter string, update interface{}) (uint64, error) {
 	cUpdate := C.CString(string(updateJSON))
 	defer C.free(unsafe.Pointer(cUpdate))
 
-	var count C.ulong
 	var cErr C.CError
-	result := C.jasonisnthappy_collection_update(c.coll, cFilter, cUpdate, &count, &cErr)
+	count := C.jasonisnthappy_collection_update(c.coll, cFilter, cUpdate, &cErr)
 
-	if result != 0 {
+	if count == -1 {
 		err := cErrorToGoError(&cErr)
 		C.jasonisnthappy_free_error(cErr)
 		return 0, err
 	}
 
-	return uint64(count), nil
+	return int64(count), nil
 }
 
 // UpdateOne updates the first document matching a filter
@@ -1513,7 +1507,7 @@ func (c *Collection) UpdateOne(filter string, update interface{}) (bool, error) 
 }
 
 // Delete deletes all documents matching a filter
-func (c *Collection) Delete(filter string) (uint64, error) {
+func (c *Collection) Delete(filter string) (int64, error) {
 	if c.coll == nil {
 		return 0, &Error{Code: -1, Message: "Collection is closed"}
 	}
@@ -1521,17 +1515,16 @@ func (c *Collection) Delete(filter string) (uint64, error) {
 	cFilter := C.CString(filter)
 	defer C.free(unsafe.Pointer(cFilter))
 
-	var count C.ulong
 	var cErr C.CError
-	result := C.jasonisnthappy_collection_delete(c.coll, cFilter, &count, &cErr)
+	count := C.jasonisnthappy_collection_delete(c.coll, cFilter, &cErr)
 
-	if result != 0 {
+	if count == -1 {
 		err := cErrorToGoError(&cErr)
 		C.jasonisnthappy_free_error(cErr)
 		return 0, err
 	}
 
-	return uint64(count), nil
+	return int64(count), nil
 }
 
 // DeleteOne deletes the first document matching a filter
@@ -1577,10 +1570,9 @@ func (c *Collection) UpsertByID(id string, doc interface{}) (*UpsertResult, erro
 	cDoc := C.CString(string(docJSON))
 	defer C.free(unsafe.Pointer(cDoc))
 
-	var resultCode C.int
-	var cResultID *C.char
+	var cResult *C.char
 	var cErr C.CError
-	status := C.jasonisnthappy_collection_upsert_by_id(c.coll, cID, cDoc, &resultCode, &cResultID, &cErr)
+	status := C.jasonisnthappy_collection_upsert_by_id(c.coll, cID, cDoc, &cResult, &cErr)
 
 	if status != 0 {
 		err := cErrorToGoError(&cErr)
@@ -1588,14 +1580,15 @@ func (c *Collection) UpsertByID(id string, doc interface{}) (*UpsertResult, erro
 		return nil, err
 	}
 
-	resultID := C.GoString(cResultID)
-	C.jasonisnthappy_free_string(cResultID)
+	resultStr := C.GoString(cResult)
+	C.jasonisnthappy_free_string(cResult)
 
-	// resultCode 0 = Inserted, 1 = Updated
-	return &UpsertResult{
-		ID:       resultID,
-		Inserted: resultCode == 0,
-	}, nil
+	var result UpsertResult
+	if err := json.Unmarshal([]byte(resultStr), &result); err != nil {
+		return nil, err
+	}
+
+	return &result, nil
 }
 
 // Upsert upserts documents matching a filter
@@ -1615,10 +1608,9 @@ func (c *Collection) Upsert(filter string, doc interface{}) (*UpsertResult, erro
 	cDoc := C.CString(string(docJSON))
 	defer C.free(unsafe.Pointer(cDoc))
 
-	var resultCode C.int
-	var cResultID *C.char
+	var cResult *C.char
 	var cErr C.CError
-	status := C.jasonisnthappy_collection_upsert(c.coll, cFilter, cDoc, &resultCode, &cResultID, &cErr)
+	status := C.jasonisnthappy_collection_upsert(c.coll, cFilter, cDoc, &cResult, &cErr)
 
 	if status != 0 {
 		err := cErrorToGoError(&cErr)
@@ -1626,14 +1618,15 @@ func (c *Collection) Upsert(filter string, doc interface{}) (*UpsertResult, erro
 		return nil, err
 	}
 
-	resultID := C.GoString(cResultID)
-	C.jasonisnthappy_free_string(cResultID)
+	resultStr := C.GoString(cResult)
+	C.jasonisnthappy_free_string(cResult)
 
-	// resultCode 0 = Inserted, 1 = Updated
-	return &UpsertResult{
-		ID:       resultID,
-		Inserted: resultCode == 0,
-	}, nil
+	var result UpsertResult
+	if err := json.Unmarshal([]byte(resultStr), &result); err != nil {
+		return nil, err
+	}
+
+	return &result, nil
 }
 
 // ====================
@@ -1710,7 +1703,7 @@ func (c *Collection) Distinct(field string) ([]interface{}, error) {
 }
 
 // CountDistinct counts distinct values for a field
-func (c *Collection) CountDistinct(field string) (uint64, error) {
+func (c *Collection) CountDistinct(field string) (int64, error) {
 	if c.coll == nil {
 		return 0, &Error{Code: -1, Message: "Collection is closed"}
 	}
@@ -1718,17 +1711,16 @@ func (c *Collection) CountDistinct(field string) (uint64, error) {
 	cField := C.CString(field)
 	defer C.free(unsafe.Pointer(cField))
 
-	var count C.ulong
 	var cErr C.CError
-	result := C.jasonisnthappy_collection_count_distinct(c.coll, cField, &count, &cErr)
+	count := C.jasonisnthappy_collection_count_distinct(c.coll, cField, &cErr)
 
-	if result != 0 {
+	if count == -1 {
 		err := cErrorToGoError(&cErr)
 		C.jasonisnthappy_free_error(cErr)
 		return 0, err
 	}
 
-	return uint64(count), nil
+	return int64(count), nil
 }
 
 // Search performs full-text search
@@ -1757,7 +1749,7 @@ func (c *Collection) Search(query string, result interface{}) error {
 }
 
 // CountWithQuery counts documents matching a filter
-func (c *Collection) CountWithQuery(filter string) (uint64, error) {
+func (c *Collection) CountWithQuery(filter string) (int64, error) {
 	if c.coll == nil {
 		return 0, &Error{Code: -1, Message: "Collection is closed"}
 	}
@@ -1765,17 +1757,16 @@ func (c *Collection) CountWithQuery(filter string) (uint64, error) {
 	cFilter := C.CString(filter)
 	defer C.free(unsafe.Pointer(cFilter))
 
-	var count C.ulong
 	var cErr C.CError
-	result := C.jasonisnthappy_collection_count_with_query(c.coll, cFilter, &count, &cErr)
+	count := C.jasonisnthappy_collection_count_with_query(c.coll, cFilter, &cErr)
 
-	if result != 0 {
+	if count == -1 {
 		err := cErrorToGoError(&cErr)
 		C.jasonisnthappy_free_error(cErr)
 		return 0, err
 	}
 
-	return uint64(count), nil
+	return int64(count), nil
 }
 
 // ====================
@@ -1818,7 +1809,7 @@ func (c *Collection) UpdateByIDTyped(id string, update interface{}) error {
 }
 
 // UpdateTyped is an alias for Update (same implementation in FFI)
-func (c *Collection) UpdateTyped(filter string, update interface{}) (uint64, error) {
+func (c *Collection) UpdateTyped(filter string, update interface{}) (int64, error) {
 	return c.Update(filter, update)
 }
 
@@ -1895,8 +1886,8 @@ func (c *Collection) QueryWithOptions(
 		cFilter,
 		cSortField,
 		C.bool(sortAsc),
-		C.ulong(limit),
-		C.ulong(skip),
+		C.longlong(limit),
+		C.longlong(skip),
 		cProject,
 		cExclude,
 		&cJSON,
@@ -1916,7 +1907,7 @@ func (c *Collection) QueryWithOptions(
 }
 
 // QueryCount counts documents matching a filter (optimized)
-func (c *Collection) QueryCount(filter string, skip uint64, limit uint64) (uint64, error) {
+func (c *Collection) QueryCount(filter string, skip int64, limit int64) (int64, error) {
 	if c.coll == nil {
 		return 0, &Error{Code: -1, Message: "Collection is closed"}
 	}
@@ -1927,24 +1918,22 @@ func (c *Collection) QueryCount(filter string, skip uint64, limit uint64) (uint6
 		defer C.free(unsafe.Pointer(cFilter))
 	}
 
-	var count C.uintptr_t
 	var cErr C.CError
-	result := C.jasonisnthappy_collection_query_count(
+	count := C.jasonisnthappy_collection_query_count(
 		c.coll,
 		cFilter,
-		C.uintptr_t(skip),
-		C.uintptr_t(limit),
-		&count,
+		C.longlong(skip),
+		C.longlong(limit),
 		&cErr,
 	)
 
-	if result != 0 {
+	if count == -1 {
 		err := cErrorToGoError(&cErr)
 		C.jasonisnthappy_free_error(cErr)
 		return 0, err
 	}
 
-	return uint64(count), nil
+	return int64(count), nil
 }
 
 // QueryFirst gets the first document matching a filter
@@ -2212,13 +2201,12 @@ func (c *Collection) WatchStart(filter string, callback WatchCallback) (*WatchHa
 	}
 
 	// Call FFI function
-	var cErr C.CError
 	var cHandle *C.CWatchHandle
-
+	var cErr C.CError
 	result := C.jasonisnthappy_collection_watch_start(
 		c.coll,
 		cFilter,
-		(C.watch_callback_fn)(unsafe.Pointer(C.goWatchCallbackBridge)),
+		(C.watch_callback_fn)(C.goWatchCallbackBridge),
 		unsafe.Pointer(callbackID),
 		&cHandle,
 		&cErr,
