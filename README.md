@@ -6,24 +6,29 @@ A lightweight, embedded document database written in Rust with ACID transactions
 
 ## Features
 
-- **ACID Transactions**: Full commit/rollback support with conflict detection and batch commit optimization
-- **MVCC**: Multi-Version Concurrency Control for snapshot isolation - reads never block writes
-- **Document Storage**: JSON documents with automatic ID generation, upsert, and CRUD operations (`find_by_id`, `find_one`, `find_all`, `count`)
-- **B-tree Storage Engine**: Copy-on-write support with single-field, compound, and unique constraint indexes
-- **Write-Ahead Logging (WAL)**: Crash recovery and durability with CRC32 checksums and auto-checkpointing
-- **Full-text Search**: TF-IDF scoring with unicode tokenization
-- **Query Language**: Operators (`and`, `or`, `not`, `>`, `>=`, `<`, `<=`, `is`, `exists`, `has`, `has_any`, `has_all`) with dot notation for nested fields
-- **Aggregation Pipeline**: `group_by`, `count`, `sum`, `avg`, `min`, `max` with `match`, `sort`, `limit`, `skip`, `project`, `exclude` stages
-- **Schema Validation**: JSON Schema with type checking, required fields, min/max constraints, enums, and nested validation
-- **Change Streams**: Real-time insert/update/delete notifications with event filtering
-- **Bulk Operations**: `insert_many`, `bulk_write` for high-throughput batch processing
-- **QueryBuilder**: Fluent API with sorting, pagination, and field projections (include/exclude)
-- **Backup & Restore**: Full database backup and restore functionality
-- **Garbage Collection**: Clean up old MVCC versions to reclaim space
-- **Read-only Mode**: Open database in read-only mode for safe concurrent access
-- **Metrics**: Track transactions, cache hits/misses, WAL stats, document counts, and errors
-- **LRU Page Cache**: Configurable in-memory caching with corruption detection
-- **Language Bindings**: Go, Python, and JavaScript (Node/Deno/Bun) via C FFI
+- **Pure Rust** — no `unsafe` code in the core library
+- **Cross-Platform** — macOS, Linux, and Windows
+- **ACID Transactions** — full commit/rollback with conflict detection
+- **MVCC** — snapshot isolation; reads never block writes
+- **Document Storage** — JSON documents with automatic ID generation and upsert
+- **B-tree Storage Engine** — copy-on-write with single-field, compound, and unique indexes
+- **Write-Ahead Logging (WAL)** — checksummed for crash recovery and durability
+- **Full-text Search** — TF-IDF scoring with Unicode tokenization
+- **Query Language** — logical, comparison, and membership operators with dot notation
+- **Aggregation Pipeline** — group, match, sort, project, and accumulator stages
+- **Schema Validation** — JSON Schema enforcement on documents
+- **Change Streams** — real-time notifications on insert, update, and delete
+- **Bulk Operations** — high-throughput batch inserts and writes
+- **QueryBuilder** — fluent API with sorting, pagination, and projections
+- **Backup & Restore** — point-in-time snapshots with file locking
+- **Garbage Collection** — reclaim space from old MVCC versions
+- **Read-only Mode** — safe concurrent access
+- **Web UI & REST API** — built-in dashboard and CRUD endpoints
+- **CLI** — interactive REPL and command-line access
+- **Metrics** — track transactions, cache, WAL, and errors
+- **Configurable** — tunable cache, checkpoints, permissions, and limits
+- **LRU Page Cache** — in-memory caching with corruption detection
+- **Language Bindings** — Go, Python, and JavaScript (Node/Deno/Bun) via C FFI
 
 ## Quick Start
 
