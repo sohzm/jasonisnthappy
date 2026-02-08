@@ -164,6 +164,10 @@ Outputs go to `builds/` directory ready for GitHub releases.
 
 See [bindings/PUBLISHING.md](bindings/PUBLISHING.md) for publishing guide.
 
+## Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=sohzm/jasonisnthappy&type=date&legend=top-left)](https://www.star-history.com/#sohzm/jasonisnthappy&type=date&legend=top-left)
+
 ## License
 
 MIT
